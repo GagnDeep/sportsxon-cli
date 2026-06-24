@@ -9,6 +9,8 @@ import type { RunContext } from "../context";
 export async function launchTui(ctx: RunContext): Promise<void> {
   const { render } = await import("ink");
   const { App } = await import("./App");
-  const instance = render(React.createElement(App, { ctx }));
+  // Clear the scrollback so the app opens on a clean screen.
+  if (process.stdout.isTTY) process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+  const instance = render(React.createElement(App, { ctx }), { exitOnCtrlC: true });
   await instance.waitUntilExit();
 }

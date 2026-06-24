@@ -315,10 +315,12 @@ export function buildProgram(): Command {
   withGlobals(
     skills
       .command("install")
-      .description("Install the bundled skill into an agent's skills directory")
+      .argument("[name]", "a single skill to install (default: all)")
+      .description("Install bundled skill(s) into an agent's skills directory")
       .option("--target <dir>", "destination skills directory")
+      .option("--all", "install every bundled skill (default)")
       .option("--force", "overwrite if present"),
-  ).action((o, cmd) => execute(ctxOf(cmd), () => agent.runSkillsInstall(ctxOf(cmd), o)));
+  ).action((name, o, cmd) => execute(ctxOf(cmd), () => agent.runSkillsInstall(ctxOf(cmd), o, name)));
 
   return program;
 }

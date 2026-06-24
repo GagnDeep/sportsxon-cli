@@ -2,7 +2,7 @@
 
 A dual-mode command-line tool for the **FIFA World Cup 2026** and **prediction-market trading** on **Kalshi** and **Polymarket**.
 
-- 🧑‍💻 **Interactive for people** — a rich [React Ink](https://github.com/vadimdemedes/ink) terminal UI: live scoreboard, market browser, live orderbooks, a paper-trading portfolio.
+- 🧑‍💻 **Interactive for people** — a rich [React Ink](https://github.com/vadimdemedes/ink) terminal UI with a tabbed dashboard: live scoreboard, searchable market browser, depth-chart orderbooks, an **order ticket** with a live fill preview, a marked-to-market portfolio + blotter, and a six-tool **quant lab** — all keyboard-driven with a `?` help overlay.
 - 🤖 **Scriptable for agents** — every command supports `--json` with a stable envelope and deterministic exit codes, so Claude Code and other agents can drive it. Ships an installable agent skill and one-command MCP registration.
 - 📈 **Trading** — paper trading by default (no money), with real Kalshi/Polymarket trading behind explicit, guarded opt-in.
 
@@ -37,7 +37,7 @@ Append `--json` to any command for machine-readable output.
 
 ## Two modes, one core
 
-`sportsxon` with no arguments **in a terminal** launches the interactive Ink TUI. When output is piped, `--json`/`--plain` is passed, or `CI` is set, it stays headless — so agents and scripts get clean, parseable output and never a TUI.
+`sportsxon` with no arguments **in a terminal** launches the interactive Ink TUI — tabs `1`–`5` (Home / Live / Markets / Portfolio / Quant), `Tab` to cycle, `?` for the keyboard reference, `q` to quit. On the Markets tab, `/` searches, `v` switches venue, `enter` opens the depth orderbook, and `o` opens the paper order ticket. When output is piped, `--json`/`--plain` is passed, or `CI` is set, it stays headless — so agents and scripts get clean, parseable output and never a TUI.
 
 ```bash
 sportsxon live --json | jq '.data.matches[0]'
@@ -92,7 +92,7 @@ Exit codes: `0` ok · `1` error · `2` usage · `3` auth/creds · `4` rate-limit
 | `accept-risk` | One-time live-trading risk acknowledgement |
 | `config` | Show settings |
 | `mcp add [--target claude-code\|claude-desktop\|cursor]` | Print MCP server config |
-| `skills install [--target] [--force]` · `skills list` | Install the bundled agent skill |
+| `skills list` · `skills install [name] [--target] [--force]` | List / install the bundled agent skills (all by default, or one by name) |
 
 ## Trading safety
 
@@ -124,12 +124,23 @@ Real Polymarket trading needs the optional peer deps `@polymarket/clob-client` a
 ## Agent / Claude Code usage
 
 ```bash
-sportsxon mcp add                 # register the read-only data server
-sportsxon skills install          # drop the skill into .claude/skills
-sportsxon live --json             # parseable output, stable exit codes
+sportsxon mcp add                          # register the read-only data server
+sportsxon skills install                   # drop ALL skills into .claude/skills
+sportsxon skills install sportsxon-kalshi  # …or just one
+sportsxon live --json                      # parseable output, stable exit codes
 ```
 
-The bundled skill (`skills/sportsxon-wc26/SKILL.md`) tells an agent which command/tool to use for each question. The data MCP server is also usable directly at `https://sportsxon.com/api/mcp`.
+The CLI bundles **five** focused agent skills (under `skills/<name>/SKILL.md`), each telling an agent exactly which command/tool to reach for:
+
+| Skill | Use it for |
+| --- | --- |
+| `sportsxon-wc26` | World Cup 2026 data + a CLI overview |
+| `sportsxon-kalshi` | Kalshi mechanics, RSA-PSS auth, fees, order flow |
+| `sportsxon-polymarket` | Polymarket CLOB, on-chain setup, order flow |
+| `sportsxon-prediction-markets` | edge-finding: EV, Kelly, arbitrage, de-vig, CLV, bankroll |
+| `sportsxon-paper-trading` | risk-free practice, backtesting, the path to live |
+
+The data MCP server is also usable directly at `https://sportsxon.com/api/mcp`.
 
 ## Development
 

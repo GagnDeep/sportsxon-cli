@@ -109,6 +109,16 @@ export async function fetchLive(ctx: RunContext): Promise<Match[]> {
   }
 }
 
+/** Fetch a fixtures/results list as a plain Match[] (used by the TUI Live tab). */
+export async function fetchMatches(
+  ctx: RunContext,
+  params: { status?: string; group?: string; team?: string; stage?: string; limit?: number } = {},
+): Promise<Match[]> {
+  const client = mcp(ctx);
+  const r = await callToolData(client, "list_matches", { limit: 48, locale: ctx.locale, ...params });
+  return asArray<Match>(r.data, "matches");
+}
+
 export async function runLive(ctx: RunContext, slug?: string): Promise<CommandOutput> {
   const client = mcp(ctx);
   if (slug) {

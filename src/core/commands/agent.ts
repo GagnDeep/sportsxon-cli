@@ -5,7 +5,7 @@ import pc from "picocolors";
 import type { RunContext } from "../../context";
 import type { CommandOutput } from "../../render/headless";
 import { CliError, ExitCode } from "../../lib/exit";
-import { SKILL_MD, SKILL_NAME } from "../skill-content";
+import { SKILLS, getSkill, renderSkill } from "../skill-content";
 
 const MCP_PATH = "/api/mcp";
 
@@ -44,27 +44,79 @@ function defaultSkillsDir(): string {
 }
 
 export function runSkillsList(_ctx: RunContext): CommandOutput {
-  const skills = [{ name: SKILL_NAME, description: "World Cup 2026 data + Kalshi/Polymarket trading via the sportsxon CLI/MCP." }];
+  const skills = SKILLS.map((s) => ({ name: s.name, description: s.description }));
   return {
     data: { skills },
     render: (color) =>
-      skills.map((s) => `${color ? pc.cyan(s.name) : s.name}\n  ${color ? pc.dim(s.description) : s.description}`).join("\n"),
+      skills
+        .map((s) => `${color ? pc.cyan(s.name) : s.name}\n  ${color ? pc.dim(s.description) : s.description}`)
+        .join("\n\n"),
   };
 }
 
-export function runSkillsInstall(ctx: RunContext, o: { target?: string; force?: boolean }): CommandOutput {
-  const baseDir = o.target ? (o.target.startsWith("~") ? o.target.replace(/^~/, os.homedir()) : o.target) : defaultSkillsDir();
-  const skillDir = path.join(baseDir, SKILL_NAME);
-  const file = path.join(skillDir, "SKILL.md");
-  if (fs.existsSync(file) && !o.force) {
-    throw new CliError(`${file} already exists.`, ExitCode.USAGE, "Pass --force to overwrite.");
+export function runSkillsInstall(
+  ctx: RunContext,
+  o: { target?: string; force?: boolean; all?: boolean },
+  name?: string,
+): CommandOutput {
+  const baseDir = o.target
+    ? o.target.startsWith("~")
+      ? o.target.replace(/^~/, os.homedir())
+      : o.target
+    : defaultSkillsDir();
+
+  // Resolve which skills to install: a named one, or all (the default).
+  let toInstall = SKILLS;
+  if (name) {
+    const one = getSkill(name);
+    if (!one) {
+      throw new CliError(
+        `Unknown skill '${name}'.`,
+        ExitCode.USAGE,
+        `Available: ${SKILLS.map((s) => s.name).join(", ")}`,
+      );
+    }
+    toInstall = [one];
+  } else if (!o.all) {
+    // No name and no --all: still install all (there are several), but say so.
+    toInstall = SKILLS;
   }
-  fs.mkdirSync(skillDir, { recursive: true });
-  fs.writeFileSync(file, SKILL_MD, "utf8");
+
+  const installed: string[] = [];
+  const skipped: string[] = [];
+  for (const skill of toInstall) {
+    const skillDir = path.join(baseDir, skill.name);
+    const file = path.join(skillDir, "SKILL.md");
+    if (fs.existsSync(file) && !o.force) {
+      skipped.push(file);
+      continue;
+    }
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(file, renderSkill(skill), "utf8");
+    installed.push(file);
+  }
+
+  if (installed.length === 0 && skipped.length > 0) {
+    throw new CliError(
+      `All ${skipped.length} skill file(s) already exist.`,
+      ExitCode.USAGE,
+      "Pass --force to overwrite.",
+    );
+  }
+
   return {
-    data: { installed: file },
-    render: (color) =>
-      (color ? pc.green("✓ ") : "✓ ") + `Installed skill '${SKILL_NAME}' to ${file}\n` +
-      (color ? pc.dim("Restart your agent to pick it up.") : "Restart your agent to pick it up."),
+    data: { installed, skipped, dir: baseDir },
+    render: (color) => {
+      const ok = color ? pc.green("✓ ") : "✓ ";
+      const lines = installed.map((f) => `${ok}${f}`);
+      if (skipped.length) {
+        lines.push(
+          (color ? pc.yellow("• ") : "• ") +
+            `skipped ${skipped.length} existing (use --force to overwrite)`,
+        );
+      }
+      lines.push(color ? pc.dim("Restart your agent to pick the skills up.") : "Restart your agent to pick the skills up.");
+      return lines.join("\n");
+    },
   };
 }
