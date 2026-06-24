@@ -1,0 +1,9 @@
+# Publish only what "files" in package.json allows; this is a backstop.
+src/
+test/
+.github/
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+*.tsbuildinfo
+.gitignore
